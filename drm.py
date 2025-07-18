@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-import getopt, os, sys
+import getopt
+import os
+import sys
+import re
 from constants import BOOK_FORMAT, ENCODING, HEADER_SIZE, HEADER_START
 from mobi import MobiBook
 
@@ -10,7 +13,7 @@ from mobi import MobiBook
 -f <file> or --file=<file>
 -s <serial> or --serial=<serial>
 """
-def read_args(argv):
+def read_args(argv) -> tuple[str, str, str]:
     file, serial, out = "", "", ""
     try:
         opts, _ = getopt.getopt(argv, "hf:s:o:", ["file=", "serial=", "out="])
@@ -38,7 +41,7 @@ file kindle文件路径
 serial kindle设备序列号(16位)
 out 输出文件路径
 """
-def check_args(file, serial, out):
+def check_args(file, serial, out) -> bool:
     if file == "":
         print("Pls. input the file name")
         return False
@@ -64,35 +67,40 @@ def check_args(file, serial, out):
 去除drm
 以-nodrm.mobi为文件名后缀重新生成文件
 """
-def remove_drm(argv):
+def sanitize_filename(name: str) -> str:
+     """
+     Substitui caracteres inválidos de nome de arquivo por underscore.
+     Ícones proibidos em Linux/Windows: / \ : * ? " < > | 
+     """
+     return re.sub(r'[\\/:\*\?\"<>|]', '_', name)
+
+def remove_drm(argv) -> None:
     # 获取文件路径和设备序列号
     file, serial, out = read_args(argv)
 
     # 校验参数是否合法
-    success = check_args(file, serial, out)
+    success: bool = check_args(file, serial, out)
     if not success:
         sys.exit()
 
     print("Processing book file: " + file)
     
     # 以二进制只读方式打开文件
-    rf = open(file, mode='rb')
-    # 读取文件头信息
-    header = rf.read(HEADER_SIZE)
-    # 关闭文件
-    rf.close
+    with open(file, mode='rb') as rf:
+        header: bytes = rf.read(HEADER_SIZE)
 
-    format = header[HEADER_START:].decode(ENCODING)
+    format: str = header[HEADER_START:].decode(ENCODING)
     # 判断是否为mobi格式文件
     if not format in BOOK_FORMAT:
         print("Illegal file format")
         sys.exit()
 
-    mb = MobiBook(file, format)
+    mb: MobiBook = MobiBook(file, format)
 
-    # 获取文件名称
-    title = mb.get_book_title()
-    print("Book's title: %s" % title)
+    # 获取并清洗文件名称
+    raw_title: str = mb.get_book_title()
+    print(f"Book's title: {raw_title}")
+    title: str = sanitize_filename(raw_title)
 
     # 去除DRM
     if not mb.process_book(serial):
@@ -100,20 +108,24 @@ def remove_drm(argv):
 
     # 求文件后缀名
     _, temp = os.path.split(file)
-    suffix = temp.split(".")[1]
+    suffix: str = temp.split(".")[1]
 
-    new_path = title + "-nodrm." + suffix
-    if out != "":
-        new_path = os.path.join(out, new_path)
+    # 构造输出路径
+    new_filename: str = f"{title}-nodrm.{suffix}"
+    if out:
+        new_path: str = os.path.join(out, new_filename)
+    else:
+        new_path = new_filename
 
     # 写入新文件
-    wf = open(new_path, mode='wb+')
-    wf.write(mb.get_result())
+    with open(new_path, mode='wb+') as wf:
+        wf.write(mb.get_result())
     print("Congratulations! DRM success!")
-    print("New file is %s" % new_path)
+    print(f"New file is {new_path}")
 
-def main(argv):
+
+def main(argv) -> None:
     remove_drm(argv)
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
