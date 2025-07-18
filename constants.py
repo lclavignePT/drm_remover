@@ -2,7 +2,8 @@
 # -*- coding: UTF-8 -*-
 
 # mobi文件的头信息中指定的格式
-BOOK_FORMAT = ("BOOKMOBI", "TEXtREAd")
+from typing import Literal
+BOOK_FORMAT: tuple[Literal['BOOKMOBI'], Literal['TEXtREAd']] = ("BOOKMOBI", "TEXtREAd")
 BOOK_MOBI = "BOOKMOBI"
 TEXTREAD = "TEXtREAd"
 
