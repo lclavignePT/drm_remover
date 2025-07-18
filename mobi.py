@@ -36,7 +36,7 @@ class MobiBook(object):
         # mobi_codepage, = struct.unpack('>L', self.__sect[0x1C:0x20])
         self.__mobi_version, = struct.unpack('>L', self.__sect[0x68:0x6C])
         
-        print("MOBI header version = %d, length = %d" % (self.__mobi_version, self.__mobi_header_len))
+        print(f"MOBI header version = {self.__mobi_version}, length = {self.__mobi_header_len}")
 
         if self.__mobi_header_len >= 0xE4 and self.__mobi_version >= 5:
             self.__extra_data_flags, = struct.unpack('>H', self.__sect[0xF2:0xF4])
@@ -100,7 +100,7 @@ class MobiBook(object):
                 tend = toff + tlen
                 title = self.__sect[toff:tend]
 
-        if title == '':
+        if not title:
             _, temp = os.path.split(self.__path)
             title = temp.split(".")[0]
             return title
@@ -138,7 +138,7 @@ class MobiBook(object):
             return False
 
         if not crypto_type in (1, 2):
-            print("Unknown encryption type:%d" % crypto_type)
+            print(f"Unknown encryption type:{crypto_type}")
             return False
 
         if 406 in self.__exth_record:
@@ -171,10 +171,10 @@ class MobiBook(object):
             pid = decrypto.get_kindle_pid(md1, md2, serial)
 
             if len(pid) != 8:
-                print("Error: PID %s is incorrect." % pid)
+                print(f"Error: PID {pid} is incorrect.")
                 return False
 
-            print("File is encoded with PID %s." % pid)
+            print(f"File is encoded with PID {pid}.")
 
             # drm_offset : offset to DRM key info in DRMed file.
             #                0xffffffff if no DRM
@@ -215,7 +215,7 @@ class MobiBook(object):
             percent = i / self.__records
             hashes = '#' * int(percent * BAR_LENGTH)
             spaces = ' ' * (BAR_LENGTH - len(hashes))
-            sys.stdout.write("\rPercent: [%s] %d%%" % (hashes + spaces, percent*100))
+            sys.stdout.write(f"\rPercent: [{hashes + spaces}] {int(percent*100)}%")
             sys.stdout.flush()
 
             pc_data = decrypto.PC1(found_key, data[0:len(data) - extra_size])
